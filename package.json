@@ -1,0 +1,63 @@
+{
+  "name": "@governancer-foundation/art50-observatory",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "author": "Alexander Brichkin (Agonist Development AB)",
+  "description": "Observe whether a public deployment discloses that it is an AI system, as Article 50(1) of the EU AI Act requires — and emit the observation as a conformance record rather than a screenshot.",
+  "keywords": [
+    "eu-ai-act",
+    "article-50",
+    "transparency",
+    "observatory",
+    "compliance",
+    "disclosure"
+  ],
+  "homepage": "https://github.com/governancer-foundation/art50-observatory#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/governancer-foundation/art50-observatory.git"
+  },
+  "bugs": {
+    "url": "https://github.com/governancer-foundation/art50-observatory/issues"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@governancer-foundation/art50-disclosure-sdk": "^0.3.0",
+    "@governancer-foundation/conformance-attestation": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.2.7",
+    "fast-check": "^4.9.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.2.7"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,21 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+
+# integration scaffolding (not published)
+HOOKS-NOTE.md
+.github/SETUP-GITHUB.md
+.husky/_/
+
+.oss-ip-guard-corpus
+
+# local audit artifacts — review packets + release-pipeline logs/status
+var/
+
+# coverage output (vitest --coverage)
+coverage/
+
+# operator-side release machinery: refers to local paths, never published
+scripts/release-pipeline*.sh
+scripts/queue-from-canonical.sh

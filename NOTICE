@@ -1,0 +1,30 @@
+@governancer/art50-disclosure-sdk
+Copyright 2026 Agonist Development AB
+
+This product (the MCP server CODE: src/, dist/, package.json, tsconfig.json,
+README.md) is licensed under the Apache License, Version 2.0 (the "License");
+you may not use this code except in compliance with the License. You may obtain
+a copy of the License in the accompanying LICENSE file or at
+http://www.apache.org/licenses/LICENSE-2.0
+
+---
+
+SCOPE OF THE APACHE-2.0 GRANT — CODE ONLY (decision 2026-06-16)
+
+The Apache-2.0 license covers ONLY the server code in this package. It does NOT
+cover the Governancer **funnel-base corpus** that this server loads at runtime.
+
+Any corpus loaded via the `FUNNEL_BASE_ROOT` environment variable — the curated,
+lawyer-attested primary statutory text, the per-statute validation bundles, and
+the validation-summary ledger that `validate_citation` cross-checks against — is a
+SEPARATE dataset supplied by the operator. The corpus that Agonist Development AB
+runs against this server is its own PROPRIETARY, ALL-RIGHTS-RESERVED dataset: it is
+NOT distributed under Apache-2.0, NOT included in this package's published `files`,
+and must NOT be redistributed.
+
+Rationale: the curated/validated corpus + citation ledger is the defensible
+asset; the server is a thin, replaceable loader. Open-sourcing the loader under a
+permissive license maximises adoption (NLnet eligibility, governancer-foundation
+OSS home) while the proprietary corpus preserves the moat. A downstream user who
+takes this Apache-2.0 server still needs their own validated corpus to make
+`validate_citation` / `get_statute` meaningful.
