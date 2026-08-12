@@ -68,6 +68,31 @@ A disclosure is recognised in the wording
 publishes, in all six of its languages, plus common phrasings nobody took from
 us.
 
+## The marking duty, too
+
+Article 50(2) requires synthetic output to be marked in a machine-readable
+format. `detectMark` reads a file's bytes and reports what it finds — from the
+box each container reserves for a provenance manifest, and from the metadata
+tag that names a generated source.
+
+```ts
+import { detectMark, toMarkStatement } from "@governancer-foundation/art50-observatory";
+
+detectMark(bytes).finding;
+// "signed-mark-present" | "unsigned-mark-only" | "no-mark-found" | "container-not-recognised"
+```
+
+**A signed manifest and an unsigned tag are not the same thing**, and this
+reports them apart rather than adding them together. A manifest is
+cryptographically signed, so tampering is detectable and the signature says who
+asserted what. A metadata tag is a string: anybody can write one, anybody can
+edit one. It is machine-readable, and it is not evidence — so only a signed
+manifest reaches a positive finding, and a tag alone draws no conclusion at all.
+
+Presence is not validity either. Finding a manifest means bytes claiming to be
+one are there; whether the signature verifies needs the full verification
+toolchain, which this package is not, and every record says so.
+
 ## Status
 
 v0.1. The detector improves by meeting pages it gets wrong — the first real

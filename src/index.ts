@@ -13,4 +13,21 @@
  */
 
 export { analyse, type AnalyseOptions, type Evidence, type Finding, type Observation } from "./analyse.js";
-export { toStatement, PROFILE_ID, REQUIREMENT, type RecordOptions } from "./record.js";
+export {
+  toStatement,
+  toMarkStatement,
+  PROFILE_ID,
+  REQUIREMENT,
+  MARKING_REQUIREMENT,
+  type RecordOptions,
+  type MarkRecordOptions,
+} from "./record.js";
+
+export {
+  detectMark,
+  type MarkEvidence,
+  type MarkFinding,
+  type MarkObservation,
+  type MarkOptions,
+  type MarkStrength,
+} from "./marking.js";
