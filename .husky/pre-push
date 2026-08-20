@@ -1,0 +1,119 @@
+#!/usr/bin/env sh
+# pre-push — public-remote-aware push gate.
+#
+# Husky v9+ executes this file under `sh`. Arguments are forwarded unchanged
+# from git: $1 = remote name, $2 = remote URL.
+#
+# Two modes, chosen by the remote URL:
+#
+#   • PUBLIC remote (governancer-foundation/art50-observatory) → full checklist:
+#       1. ONE-COMMIT-PER-PUSH gate — at most one new commit may land per push
+#          to the public repo. This is the core anti-bump discipline: it keeps
+#          the public history a clean, reviewable, one-artifact-per-commit
+#          trickle instead of a squashed dump. Bypass ONLY for the documented
+#          filter-branch / history-rewrite leak-scrub with
+#          GIT_PUSH_LEAK_SCRUB=1.
+#       2. oss-ip-guard.sh --dir . — full-tree anti-leak sweep (not just the
+#          staged diff: catches anything already committed).
+#       3. npm run build — the published artifact (tsc) must compile.
+#
+#   • any OTHER remote → fast subset: the anti-leak sweep only. The build +
+#     one-commit gate are public-repo disciplines; private/canonical pushes
+#     skip them for responsiveness.
+#
+# Both modes block the push on failure.
+#
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Agonist Development AB
+
+REMOTE_NAME="${1:-origin}"
+REMOTE_URL="${2:-}"
+
+# ── Published-remote detection ──────────────────────────────────────────────
+# The organisation hosts more than one repository, and only the published one
+# is subject to the one-commit-per-push discipline. Matching the organisation
+# alone also caught the internal mirrors, where landing a batch is the intended
+# workflow — and the block was unavoidable, because the count below is taken
+# from the branch, so pushing the commits one at a time did not clear it.
+#
+# Match the published repository by name, on any URL shape git may pass:
+#   git@github-...:governancer-foundation/<repo>.git   (per-account SSH alias)
+#   git@github.com:governancer-foundation/<repo>.git   (plain SSH)
+#   https://github.com/governancer-foundation/<repo>   (HTTPS)
+PUBLISHED_REPO="${PUBLISHED_REPO:-art50-observatory}"
+IS_PUBLIC=0
+case "$REMOTE_URL" in
+  *governancer-foundation/"$PUBLISHED_REPO"|*governancer-foundation/"$PUBLISHED_REPO".git)
+    IS_PUBLIC=1
+    ;;
+esac
+
+if [ "$IS_PUBLIC" = "1" ]; then
+  echo "pre-push: public remote ($REMOTE_URL) — full checklist"
+
+  # ── Gate 1: ONE-COMMIT-PER-PUSH (anti-bump discipline) ────────────────────
+  # Each push to the published remote may land at most one new commit.
+  #
+  # Count what is actually being pushed, from the ref pairs git writes on
+  # stdin, rather than the branch's distance from its upstream. Those differ
+  # whenever a specific commit is pushed rather than the branch tip — exactly
+  # the single-commit trickle this gate is meant to permit — and taking the
+  # branch distance blocked the trickle it recommends.
+  #
+  # Each stdin line is: <local ref> <local sha> <remote ref> <remote sha>
+  # Set GIT_PUSH_LEAK_SCRUB=1 to bypass for a documented history rewrite.
+  if [ "${GIT_PUSH_LEAK_SCRUB:-0}" != "1" ]; then
+    ZERO="0000000000000000000000000000000000000000"
+    while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
+      # Deletion — nothing lands.
+      [ "$LOCAL_SHA" = "$ZERO" ] && continue
+      if [ "$REMOTE_SHA" = "$ZERO" ]; then
+        # A new ref. What lands is what the remote does not already hold, so
+        # pointing a fresh branch at a commit that is already published adds
+        # nothing — counting its whole ancestry would block that.
+        PENDING=$(git rev-list "$LOCAL_SHA" --not --remotes="$REMOTE_NAME" --count 2>/dev/null || echo 0)
+      else
+        PENDING=$(git rev-list "$REMOTE_SHA..$LOCAL_SHA" --count 2>/dev/null || echo 0)
+      fi
+      if [ "$PENDING" -gt 1 ]; then
+        echo "" >&2
+        echo "pre-push BLOCKED — $PENDING commits would land on $REMOTE_REF in one push." >&2
+        echo "    The published repo takes one commit per push. Push the oldest" >&2
+        echo "    unpushed commit by name, then the next:" >&2
+        echo "      git push $REMOTE_NAME <sha>:$REMOTE_REF" >&2
+        echo "    Or, for a documented history rewrite:" >&2
+        echo "      GIT_PUSH_LEAK_SCRUB=1 git push ..." >&2
+        exit 1
+      fi
+    done
+  fi
+
+  # ── Gate 2: full-tree anti-leak sweep ─────────────────────────────────────
+  if ! bash scripts/oss-ip-guard.sh --dir .; then
+    echo "" >&2
+    echo "pre-push BLOCKED — oss-ip-guard found a negative-list match in the" >&2
+    echo "  working tree. The public repo must not carry corpus/secret/internal" >&2
+    echo "  content. Remove it before pushing." >&2
+    exit 1
+  fi
+
+  # ── Gate 3: the published artifact must build ─────────────────────────────
+  if ! npm run build; then
+    echo "" >&2
+    echo "pre-push BLOCKED — npm run build (tsc) failed. The published dist/" >&2
+    echo "  must compile before pushing to the public repo." >&2
+    exit 1
+  fi
+
+  echo "pre-push: checklist PASS"
+else
+  echo "pre-push: $REMOTE_URL — fast checklist (anti-leak sweep only)"
+  if ! bash scripts/oss-ip-guard.sh --dir .; then
+    echo "" >&2
+    echo "pre-push BLOCKED — oss-ip-guard found a negative-list match." >&2
+    exit 1
+  fi
+  echo "pre-push: fast checklist PASS"
+fi
+
+exit 0

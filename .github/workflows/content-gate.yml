@@ -1,0 +1,64 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Agonist Development AB
+#
+# content-gate — staging anti-leak audit. On every PR, compute the set of
+# changed text files and run the hand-authored guard (scripts/oss-ip-guard.sh
+# --files <changed>) over exactly those files. A negative-list match (private
+# secret/credential, internal monorepo path, or
+# AI-authorship trailer) fails the check before merge.
+
+name: content-gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: content-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  content-gate:
+    name: Anti-leak content gate
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compute changed text files
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}" --depth=1 || true
+          # Selected by extension, plus the git hooks, which carry no extension
+          # and are published like everything else.
+          #
+          # Exclude the guard's own script and build output: the guard carries
+          # the forbidden literals as its detection signatures and must not
+          # report itself.
+          #
+          # The trailing `|| true` matters. Under `pipefail` a grep that matches
+          # nothing fails the whole pipeline, so a change touching no scannable
+          # file would fail the gate rather than pass it — which is what a
+          # commit to a hook alone used to do. Nothing to scan is a pass; the
+          # scan step below is skipped on an empty list.
+          files=$(git diff --name-only --diff-filter=ACM "$base"...HEAD \
+            | grep -E '\.(md|mdx|ts|tsx|json|yml|yaml|html|css|sh|txt|toml)$|^\.husky/' \
+            | grep -vE '/dist/|/node_modules/|package-lock\.json|scripts/oss-ip-guard\.sh' \
+            | tr '\n' ' ' || true)
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+          echo "Scanning: ${files:-<none>}"
+
+      - name: Run oss-ip-guard over changed files
+        if: steps.changed.outputs.files != ''
+        run: bash scripts/oss-ip-guard.sh --files ${{ steps.changed.outputs.files }}

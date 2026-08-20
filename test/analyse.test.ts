@@ -132,7 +132,7 @@ describe("the record it produces", () => {
     url: "https://example.org/support",
     body: page(CHAT),
     observedAt: "2026-08-12T00:00:00.000Z",
-    observer: { name: "@governancer-foundation/art50-observatory", version: "0.1.0" },
+    observer: { name: "@governancer-foundation/art50-disclosure-sdk", version: "0.1.0" },
   };
 
   it("validates against the shared schema", () => {

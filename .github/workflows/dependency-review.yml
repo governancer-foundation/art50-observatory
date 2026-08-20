@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Agonist Development AB
+#
+# GitHub Dependency Review — blocks PRs introducing known-vulnerable
+# dependencies or license-incompatible packages. Free for public repos;
+# activates after the Dependency Graph is enabled (default on for public).
+#
+# Reference: https://docs.github.com/en/code-security/supply-chain-security
+
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: read-all
+
+concurrency:
+  group: dep-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    name: Review dependency changes
+    # Dependency review needs the Dependency Graph + GitHub Advanced Security,
+    # which on private repos requires a paid plan. It activates on the public flip.
+    if: github.event.repository.visibility == 'public'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          # Fail PRs that introduce moderate or higher severity vulnerabilities.
+          fail-on-severity: moderate
+          # Deny copyleft licenses incompatible with Apache-2.0 distribution.
+          # (The action forbids specifying both allow-licenses and deny-licenses;
+          # a denylist fits an Apache-2.0 package — everything permissive is allowed,
+          # only strong-copyleft/source-available licenses are blocked.)
+          deny-licenses: >-
+            AGPL-1.0-only, AGPL-1.0-or-later,
+            AGPL-3.0-only, AGPL-3.0-or-later,
+            GPL-2.0-only, GPL-2.0-or-later,
+            GPL-3.0-only, GPL-3.0-or-later,
+            LGPL-3.0-only, LGPL-3.0-or-later,
+            SSPL-1.0, BUSL-1.1
+          comment-summary-in-pr: on-failure

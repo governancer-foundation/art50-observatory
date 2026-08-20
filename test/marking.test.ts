@@ -170,7 +170,7 @@ describe("the record it produces", () => {
   const OPTS = {
     url: "https://example.org/clip.jpg",
     observedAt: "2026-08-12T00:00:00.000Z",
-    observer: { name: "@governancer-foundation/art50-observatory", version: "0.1.0" },
+    observer: { name: "@governancer-foundation/art50-disclosure-sdk", version: "0.1.0" },
   };
 
   it("validates for every finding the detector can reach", () => {

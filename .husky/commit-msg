@@ -1,0 +1,61 @@
+#!/usr/bin/env sh
+# commit-msg — three gates on the proposed commit message ($1 = path to the
+# temporary file holding the message git is about to record).
+#
+#   1. commitlint  — conventional-commits structure (type(scope): subject),
+#                    config in ../commitlint.config.js (extends
+#                    @commitlint/config-conventional).
+#   2. AI-trailer reject — no «Co-Authored-By: <AI>» / «Generated with <AI>»
+#                    style provenance trailer may enter the history (Agonist
+#                    Development AB copyright invariant — all authorship is the
+#                    sole human operator's).
+#   3. DCO (Developer Certificate of Origin) — every commit must carry a
+#                    «Signed-off-by:» line (the `git commit -s` trailer).
+#
+# Any gate failing aborts the commit (non-zero exit). Husky v9+ sources its
+# shim automatically; this file runs under `sh`.
+#
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Agonist Development AB
+
+MSG_FILE="$1"
+
+# ── Gate 1: conventional-commits structure ──────────────────────────────────
+npx --no-install commitlint --edit "$MSG_FILE" || exit 1
+
+# ── Gate 2: reject AI-authorship provenance trailers ────────────────────────
+# The forbidden trailers are assembled from fragments at runtime so THIS hook
+# file never itself contains the literal banned string — otherwise the guard
+# would (correctly) reject any commit that touches this very file. The regex
+# the grep ultimately runs still matches the real trailers.
+CO=$(printf '%s' 'Co-Authored' )
+BY=$(printf '%s' '-By' )
+GEN=$(printf '%s' 'Generated with' )
+SRC=$(printf '%s' 'Source:' )
+# AI vendor/product names that must never appear as commit authors.
+AI='(Cl''aude|Anthropic|Copilot|ChatGPT|GPT-[0-9]|OpenAI|Gemini|Codex|AI assistant)'
+
+AI_TRAILER_REGEX="^(${CO}${BY}|${GEN}|${SRC})[[:space:]]*.*${AI}"
+
+if grep -qiE "$AI_TRAILER_REGEX" "$MSG_FILE"; then
+  echo "" >&2
+  echo "commit-msg BLOCKED — AI-authorship trailer detected." >&2
+  echo "  Agonist Development AB attribution policy: all work is the sole" >&2
+  echo "  legal authorship of the human operator. Remove the" >&2
+  echo "  «${CO}${BY}: <AI> …» / «${GEN} <AI>» trailer and re-commit." >&2
+  exit 1
+fi
+
+# ── Gate 3: require a Signed-off-by (DCO) line ──────────────────────────────
+if ! grep -qE '^Signed-off-by: .+ <.+@.+>' "$MSG_FILE"; then
+  echo "" >&2
+  echo "commit-msg BLOCKED — missing DCO sign-off." >&2
+  echo "  Every commit must certify the Developer Certificate of Origin." >&2
+  echo "  Re-commit with -s, e.g.:" >&2
+  echo "      git commit -s ..." >&2
+  echo "  expected trailer:" >&2
+  echo "      Signed-off-by: Alexander Brichkin <git@governancer.com>" >&2
+  exit 1
+fi
+
+exit 0

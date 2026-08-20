@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Agonist Development AB
+#
+# CodeRabbit configuration for governancer-foundation/art50-observatory.
+# CodeRabbit (https://coderabbit.ai) is an AI PR reviewer that auto-posts a
+# high-level summary + per-file walkthrough on every PR. It activates when the
+# CodeRabbit GitHub App is installed on the repo/org and this file is present.
+# Reference: https://docs.coderabbit.ai/getting-started/configure-coderabbit
+
+language: en-GB
+early_access: false
+
+reviews:
+  profile: balanced
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - staging
+
+  path_filters:
+    # Engineering review scope — the npm/TS library + its CI
+    - 'src/**'
+    - '.github/workflows/**'
+    - 'scripts/**.sh'
+    - 'package.json'
+    - 'tsconfig.json'
+    # Exclude generated + vendored
+    - '!**/dist/**'
+    - '!**/node_modules/**'
+    - '!package-lock.json'
+    - '!**/CHANGELOG.md'
+
+  path_instructions:
+    - path: 'src/**'
+      instructions: |
+        Pure TypeScript library, no runtime dependencies. Verify: SPDX
+        header (Apache-2.0 + 2026 Agonist Development AB); strict TypeScript
+        (no `any`, no unsafe `as` casts other than `as const`); every reasoning
+        string matches the provision it cites. Flag anything that belongs to
+        the author's private working environment rather than to this package:
+        an absolute path into a developer home directory, a package specifier
+        from a workspace this repository is not part of, an internal document
+        name, or a credential of any shape.
+    - path: '.github/workflows/**'
+      instructions: |
+        Pin every third-party action to a 40-char commit SHA with the version
+        tag in a trailing comment. Verify `permissions:` is least-privilege.
+        Flag any `pull_request_target` usage as a supply-chain risk.
+
+  tools:
+    actionlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true

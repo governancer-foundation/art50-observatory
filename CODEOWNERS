@@ -1,0 +1,40 @@
+# CODEOWNERS — review requirements for governancer-foundation/art50-observatory.
+#
+# Each line maps a file/dir glob to a GitHub user/team that must review
+# changes. More-specific patterns later in this file override earlier ones.
+#
+# NOTE: the @governancer-foundation/maintainers team must EXIST in the
+# governancer-foundation organisation for these rules to take effect. Until
+# the team is created, GitHub silently ignores the unresolvable owner and
+# the primary maintainer is the effective reviewer. Create the team before
+# enabling "Require review from Code Owners" branch protection.
+
+# ───────────────────────────────────────────────────────────────────
+# Default: maintainers review everything
+# ───────────────────────────────────────────────────────────────────
+*                               @governancer-foundation/maintainers
+
+# ───────────────────────────────────────────────────────────────────
+# Server source — strictest review (path-handling, no-egress invariant)
+# ───────────────────────────────────────────────────────────────────
+/src/                           @governancer-foundation/maintainers
+
+# ───────────────────────────────────────────────────────────────────
+# Governance + docs
+# ───────────────────────────────────────────────────────────────────
+/README.md                      @governancer-foundation/maintainers
+/CONTRIBUTING.md                @governancer-foundation/maintainers
+/CODE_OF_CONDUCT.md             @governancer-foundation/maintainers
+/SECURITY.md                    @governancer-foundation/maintainers
+/GOVERNANCE.md                  @governancer-foundation/maintainers
+/NOTICE                         @governancer-foundation/maintainers
+/LICENSE                        @governancer-foundation/maintainers
+/REUSE.toml                     @governancer-foundation/maintainers
+
+# ───────────────────────────────────────────────────────────────────
+# CI / supply-chain — security-sensitive
+# ───────────────────────────────────────────────────────────────────
+/.github/workflows/             @governancer-foundation/maintainers
+/.github/dependabot.yml         @governancer-foundation/maintainers
+/CODEOWNERS                     @governancer-foundation/maintainers
+/scripts/                       @governancer-foundation/maintainers

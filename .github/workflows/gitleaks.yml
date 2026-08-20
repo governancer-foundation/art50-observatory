@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Agonist Development AB
+#
+# gitleaks — scans every PR + push for committed secrets; full-history sweep
+# weekly. Uses the MIT-licensed `gitleaks` binary directly (the scanner is
+# MIT). The `gitleaks-action` wrapper requires a paid GITLEAKS_LICENSE for
+# org-owned repos since the 2024 license-key change — installing the upstream
+# binary ourselves sidesteps that and keeps the job token-free.
+
+name: gitleaks
+
+on:
+  push:
+    branches: [staging, main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '23 4 * * 1' # Monday 04:23 UTC — full-history sweep
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: gitleaks scan
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      security-events: write # for SARIF upload to code-scanning
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0 # full history for the scheduled scan
+          persist-credentials: false
+
+      - name: Download gitleaks
+        # Latest stable on 2026-05-20 = v8.30.1
+        # (`gh api repos/gitleaks/gitleaks/releases/latest --jq .tag_name`).
+        run: |
+          GITLEAKS_VERSION=8.30.1
+          curl -sSL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tar.gz
+          chmod +x gitleaks
+          ./gitleaks version
+
+      - name: Run gitleaks scan
+        run: |
+          ./gitleaks detect \
+            --source . \
+            --redact \
+            --no-banner \
+            --report-format sarif \
+            --report-path gitleaks.sarif \
+            --exit-code 1
+
+      - name: Upload SARIF
+        continue-on-error: true  # SARIF upload needs code-scanning (GHAS); on a private repo the scan is still the gate
+        if: always() && hashFiles('gitleaks.sarif') != ''
+        uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3.29.0
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks

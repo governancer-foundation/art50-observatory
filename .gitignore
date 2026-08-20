@@ -19,3 +19,10 @@ coverage/
 # operator-side release machinery: refers to local paths, never published
 scripts/release-pipeline*.sh
 scripts/queue-from-canonical.sh
+
+# transient CI smoke script
+ci-smoke.mjs
+# operator-side release machinery
+scripts/release-pipeline*.sh
+scripts/queue-from-canonical.sh
+var/

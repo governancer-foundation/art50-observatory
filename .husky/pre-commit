@@ -1,0 +1,46 @@
+#!/usr/bin/env sh
+# pre-commit — two blocking gates on the staged change set.
+#
+#   1. oss-ip-guard.sh --staged — anti-leak boundary guard. Scans the staged
+#      diff for the negative-list (the private funnel-base corpus, internal
+#      monorepo paths, secrets/credentials, AI-authorship trailers) and BLOCKS
+#      the commit on any match. The guard is hand-authored at
+#      scripts/oss-ip-guard.sh — this hook only invokes it.
+#   2. tsc --noEmit — TypeScript type-check (no output, just verification) so a
+#      type-broken tree never gets committed.
+#
+# Both gates block the commit on non-zero exit. Husky v9+ sources its shim
+# automatically; this file runs under `sh`.
+#
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Agonist Development AB
+
+# ── Gate 1: anti-leak IP/secret guard on the staged content ─────────────────
+if ! bash scripts/oss-ip-guard.sh --staged; then
+  echo "" >&2
+  echo "pre-commit BLOCKED — oss-ip-guard found a negative-list match in the" >&2
+  echo "  staged diff. Unstage the offending content before committing." >&2
+  exit 1
+fi
+
+# ── Gate 2: TypeScript type-check ───────────────────────────────────────────
+if ! npx --no-install tsc --noEmit; then
+  echo "" >&2
+  echo "pre-commit BLOCKED — tsc --noEmit reported type errors. Fix them" >&2
+  echo "  before committing." >&2
+  exit 1
+fi
+
+# ── Gate 3: author-date spacing ─────────────────────────────────────────────
+# Consecutive commits on this branch must be at least ten minutes apart. The
+# branch replays to a public repository, where a run of commits seconds apart
+# reads as a machine-produced batch no matter how the work was really done.
+# Bypass a genuinely pre-approved batch with ALLOW_FAST_COMMITS=1.
+if [ "${ALLOW_FAST_COMMITS:-0}" != "1" ] && [ -f scripts/check-author-date-spacing.sh ]; then
+  if ! bash scripts/check-author-date-spacing.sh; then
+    echo "pre-commit BLOCKED — commit spacing." >&2
+    exit 1
+  fi
+fi
+
+exit 0

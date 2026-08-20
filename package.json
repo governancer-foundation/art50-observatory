@@ -44,10 +44,11 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "prepare": "husky"
   },
   "dependencies": {
-    "@governancer-foundation/art50-disclosure-sdk": "^0.3.0",
+    "@governancer-foundation/art50-observatory": "^0.3.0",
     "@governancer-foundation/conformance-attestation": "^0.2.0"
   },
   "devDependencies": {

@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Agonist Development AB
+#
+# CI — Build / Lint / Test for @governancer-foundation/art50-observatory.
+# Single npm/TypeScript package: a library, imported by callers.
+# Build system is npm + tsc (NOT pnpm/turbo). Tests run on vitest.
+# Also runs the hand-authored anti-leak guard (scripts/oss-ip-guard.sh) so no
+# secret or internal path can ride a build to a
+# public push.
+
+name: CI
+
+on:
+  push:
+    branches: [staging, main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build / Lint / Test
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck (source + specs)
+        # Keep `--noEmit` so this step never writes to dist/.
+        run: npm run typecheck
+
+      - name: Test (vitest)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Smoke — the built package reads a file and a page
+        # Loads what would actually ship and drives both detectors, so a broken
+        # build output or a dropped export cannot pass unnoticed.
+        run: |
+          cat > ci-smoke.mjs <<'SMOKE'
+          import { analyse, detectMark, toStatement, toMarkStatement } from "./dist/index.js";
+          const page = `<html><body><div role="dialog" class="chat"><input placeholder="Ask"></div></body></html>`;
+          const o = analyse(page);
+          if (o.finding !== "no-disclosure-found") throw new Error(`page: ${o.finding}`);
+          // Long enough to carry a container header: the reader declines to
+          // guess from fewer bytes than a header occupies.
+          const jpeg = new Uint8Array([
+            0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46,
+            0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0xff, 0xda,
+          ]);
+          const m = detectMark(jpeg);
+          if (m.container !== "jpeg") throw new Error(`file: ${m.container}`);
+          const opts = { url: "https://example.test/x", observedAt: "2026-01-01T00:00:00.000Z",
+                         observer: { name: "ci", version: "0" } };
+          toStatement(o, { ...opts, body: page });
+          toMarkStatement(m, { ...opts, bytes: jpeg });
+          console.log("smoke ok:", o.finding, m.finding);
+          SMOKE
+          node ci-smoke.mjs
+          rm -f ci-smoke.mjs
+
+      - name: Anti-leak guard (oss-ip-guard --dir .)
+        # Sweep the publishable tree for secret/internal/trailer
+        # leaks before anything is publishable. The guard is hand-authored
+        # at scripts/oss-ip-guard.sh — CI only calls it.
+        run: bash scripts/oss-ip-guard.sh --dir .
+
+      - name: Pre-publish check (if present)
+        # Optional: only runs when the repo carries a pre-publish-check.sh.
+        # Keeps CI green before that script lands while wiring it once it does.
+        run: |
+          if [ -f scripts/pre-publish-check.sh ]; then
+            bash scripts/pre-publish-check.sh
+          else
+            echo "scripts/pre-publish-check.sh not present — skipping."
+          fi

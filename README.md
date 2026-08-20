@@ -64,7 +64,7 @@ never raised, which costs an operator time to rebut and costs the observatory
 its standing.
 
 A disclosure is recognised in the wording
-[`art50-disclosure-sdk`](https://github.com/governancer-foundation/art50-disclosure-sdk)
+[`art50-observatory`](https://github.com/governancer-foundation/art50-observatory)
 publishes, in all six of its languages, plus common phrasings nobody took from
 us.
 

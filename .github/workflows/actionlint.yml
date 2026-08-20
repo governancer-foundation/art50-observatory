@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Agonist Development AB
+#
+# actionlint — lints all .github/workflows/*.yml for syntax errors, deprecated
+# runners, expression typos, and embedded shellcheck violations inside `run:`
+# blocks. Free MIT (rhysd/actionlint). Catches the class of bugs the Trivy
+# supply-chain attack (March 2026) exploited.
+
+name: actionlint
+
+on:
+  push:
+    branches: [staging, main]
+    paths:
+      - '.github/workflows/**.yml'
+      - '.github/workflows/**.yaml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/**.yml'
+      - '.github/workflows/**.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: actionlint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: actionlint
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Run actionlint
+        # Download the upstream installer script for the pinned actionlint
+        # release (v1.7.4, 2026-03), verify its SHA-256 checksum, then execute
+        # it. Pinning the content by checksum prevents a tampered installer
+        # from running even if the tag is moved or the CDN is compromised.
+        env:
+          ACTIONLINT_INSTALLER_URL: https://raw.githubusercontent.com/rhysd/actionlint/v1.7.4/scripts/download-actionlint.bash
+          ACTIONLINT_INSTALLER_SHA256: 3ddb1e7b984240fa022b3ce105991d9d6309a182f00a8fa7923038aab7f551cd
+        run: |
+          curl -fsSL "$ACTIONLINT_INSTALLER_URL" -o download-actionlint.bash
+          echo "${ACTIONLINT_INSTALLER_SHA256}  download-actionlint.bash" | sha256sum --check --status
+          bash download-actionlint.bash
+          ./actionlint -color
+        shell: bash

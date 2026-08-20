@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Agonist Development AB
+#
+# OpenSSF Scorecard — automated supply-chain security posture scoring
+# (branch-protection, pinned-dependencies, token-permissions, etc.). Results
+# are published to the OpenSSF public dashboard and uploaded to GitHub
+# code-scanning. Free for public repos.
+
+name: OpenSSF Scorecard
+
+on:
+  branch_protection_rule:
+  schedule:
+    - cron: '17 4 * * 1' # Monday 04:17 UTC
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scorecard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    if: github.event.repository.visibility == 'public'  # Scorecard publish needs public
+    name: Scorecard analysis
+    runs-on: ubuntu-22.04
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        # Floating `@v2` tag was removed by OSSF; pin to a specific release.
+        # SHA below is the commit SHA (not the annotated-tag-object SHA);
+        # scorecard's imposter-commit verification only accepts commit SHAs.
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      - name: Upload to code-scanning
+        uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3.29.0
+        with:
+          sarif_file: results.sarif
