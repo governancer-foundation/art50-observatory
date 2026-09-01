@@ -63,7 +63,7 @@ jobs:
       - name: Upload SARIF
         continue-on-error: true  # SARIF upload needs code-scanning (GHAS); on a private repo the scan is still the gate
         if: always() && hashFiles('gitleaks.sarif') != ''
-        uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3.29.0
+        uses: github/codeql-action/upload-sarif@6f5948dfacef28e207b48d0905cf90c03365536d # v3.29.0
         with:
           sarif_file: gitleaks.sarif
           category: gitleaks
