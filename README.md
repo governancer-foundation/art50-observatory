@@ -51,8 +51,43 @@ naming the requirement, the outcome, the reasoning and the limitations does.
 
 **Two halves, kept apart.** `analyse` is pure — markup in, observation out, no
 network and no clock — so it can be tested exhaustively and its results
-reproduce. Fetching is yours: this package will not decide for you what to
-request, how often, or whether you are welcome to.
+reproduce. Everything that touches the network sits above it, in `survey`.
+
+## Surveying a list of pages
+
+```bash
+npx @governancer-foundation/art50-observatory pages.txt --out records/
+```
+
+One URL per line; blank lines and `#` comments are ignored, so a list can carry
+its own notes about how it was sampled. One record is written per page that was
+observed, and everything else is reported on the error stream with the reason.
+
+An observatory that measures other people's sites without asking is a scraper
+with a mission statement, so the survey owns the manners rather than leaving
+them to each caller:
+
+- Each host's exclusion file is fetched **before** anything else is requested,
+  and its answer is obeyed. A file that could not be read is treated as a
+  refusal — the operator may have said no in it, and guessing in our own favour
+  is the overstatement this project refuses everywhere else.
+- Requests to a host are paced at the interval its operator asked for, or a
+  floor, whichever is slower.
+- A response cut at the size limit produces no finding. The disclosure could
+  have been in the part we discarded.
+
+The same is available as a function, if you would rather drive it yourself:
+
+```ts
+import { survey } from "@governancer-foundation/art50-observatory";
+
+const results = await survey(urls, {
+  userAgent: "my-observatory/1.0",
+  observerVersion: "1.0",
+  observedAt: new Date().toISOString(),
+});
+// each result is "observed" (with a record), "declined", or "unusable"
+```
 
 ## What it looks for
 
@@ -95,8 +130,13 @@ toolchain, which this package is not, and every record says so.
 
 ## Status
 
-v0.1. The detector improves by meeting pages it gets wrong — the first real
+v0.2. The detector improves by meeting pages it gets wrong — the first real
 page it was pointed at produced a false positive, which is now a test.
+
+Where this is going, and what it will not do, is in
+[`ROADMAP.md`](./ROADMAP.md). The short version: the next thing worth having is
+a published survey with its sampling stated, and the thing it will never do is
+call an operator non-compliant.
 
 ## License
 
