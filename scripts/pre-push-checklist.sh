@@ -92,12 +92,19 @@ if (( CHEAP_ONLY == 0 )); then
     # runs against the sources, so a broken build output or a dropped export
     # would otherwise pass unnoticed.
     if node --input-type=module -e '
-        import { resolveObligations, planDisclosures, buildManifest } from "./dist/index.js";
-        const p = { interactsWithPersons: true };
-        if (!resolveObligations(p).applicable.includes("50(1)")) process.exit(1);
-        if (planDisclosures(p, { locale: "de" }).notices.length === 0) process.exit(1);
-        if (buildManifest(p, { generatedAt: "2026-01-01T00:00:00.000Z", sdkVersion: "x" })
-              .obligations.length !== 4) process.exit(1);
+        import { analyse, toStatement, detectMark, survey } from "./dist/index.js";
+        const page = `<html><body><div id="chatbot"><input placeholder="Ask a question">`
+          + `</div><p>You are chatting with an AI assistant.</p></body></html>`;
+        const o = analyse(page);
+        if (o.finding !== "disclosed") process.exit(1);
+        if (o.limitations.length === 0) process.exit(1);
+        const s = toStatement(o, {
+          url: "https://example.org/x", body: page,
+          observedAt: "2026-01-01T00:00:00.000Z",
+          observer: { name: "smoke", version: "0" },
+        });
+        if (s.predicate.assessment[0].outcome !== "supports") process.exit(1);
+        if (typeof detectMark !== "function" || typeof survey !== "function") process.exit(1);
       ' >/dev/null 2>&1; then
       ok "smoke — built package works when imported"
     else
