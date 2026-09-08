@@ -1,6 +1,6 @@
 {
   "name": "@governancer-foundation/art50-observatory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "author": "Alexander Brichkin (Agonist Development AB)",
   "description": "Observe whether a public deployment discloses that it is an AI system, as Article 50(1) of the EU AI Act requires \u2014 and emit the observation as a conformance record rather than a screenshot.",
@@ -63,5 +63,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "bin": {
+    "art50-observatory": "./dist/cli.js"
   }
 }
